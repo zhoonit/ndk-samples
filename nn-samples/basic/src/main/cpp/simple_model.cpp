@@ -107,6 +107,46 @@ SimpleModel::SimpleModel(size_t size, int protect, int fd, size_t offset) :
 bool SimpleModel::CreateCompiledModel() {
     int32_t status;
 
+#if __ANDROID_API__ >= 29
+    uint32_t numDevices = -1;
+    status = ANeuralNetworks_getDeviceCount(&numDevices);
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "device cnt: %u, api: %d", numDevices, __ANDROID_API__);
+    if (status != ANEURALNETWORKS_NO_ERROR) {
+        __android_log_print(ANDROID_LOG_ERROR, LOG_TAG,
+                            "ANeuralNetworksworks_getDeviceCount failed");
+        return false;
+    }
+
+    for(int i = 0; i < numDevices; ++i) {
+        ANeuralNetworksDevice *device;
+        status = ANeuralNetworks_getDevice(i, &device);
+        if (status != ANEURALNETWORKS_NO_ERROR) {
+            __android_log_print(ANDROID_LOG_ERROR, LOG_TAG,
+                                "ANeuralNetworksworks_getDevice failed");
+            return false;
+        }
+
+        int64_t feature_level;
+        const char * name;
+        status = ANeuralNetworksDevice_getName(device, &name);
+        if (status != ANEURALNETWORKS_NO_ERROR) {
+            __android_log_print(ANDROID_LOG_ERROR, LOG_TAG,
+                                "ANeuralNetworksworks_getFeaturename failed");
+            return false;
+        }
+
+        status = ANeuralNetworksDevice_getFeatureLevel(device, &feature_level);
+        if (status != ANEURALNETWORKS_NO_ERROR) {
+            __android_log_print(ANDROID_LOG_ERROR, LOG_TAG,
+                                "ANeuralNetworksworks_getFeatureLevel failed");
+            return false;
+        }
+
+        __android_log_print(ANDROID_LOG_INFO, LOG_TAG,
+                            "device name: %s, supported feature level %d", name, feature_level);
+    }
+#endif
+
     // Create the ANeuralNetworksModel handle.
     status = ANeuralNetworksModel_create(&model_);
     if (status != ANEURALNETWORKS_NO_ERROR) {
